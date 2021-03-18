@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css" />
+  <title>Travel App!</title>
+</head>
+
+<body>
+
+  <header>
+    <h1>
+      Travel App
+    </h1>
+  </header>
+
+  <main>
+    <section>
+      <h2>Plan your trip</h2>
+      <div id="input-data">
+        <h4>
+          Search for your next trip...
+        </h4>
+        <div class="block">
+          <label for="from-place">From...</label>
+          <input id="from-place" type="text" name="from-place" value="" placeholder="ie: London" />
+          <label for="to-place">To...</label>
+          <input id="to-place" type="text" name="to-place" value="" placeholder="ie: San Francisco" />
+        </div>
+        <div class="block">
+          <label for="from-date">From...</label>
+          <input type="text" id="from-date" name="from-date" autocomplete="off" />
+          <label for="to-date">To...</label>
+          <input type="text" id="to-date" name="to-date" autocomplete="off" />
+        </div>
+        <div class="block block-submit">
+          <input type="submit" id="search" value="Search..." />
+        </div>
+      </div>
+    </section>
+    <section>
+      <h2>More information...</h2>
+      <div class="body">
+        <div id="results">
+          <div id="travel" class="data-travel">
+            <div class="travel-info">
+              <div class="travel-image"><img src="https://cdn.pixabay.com/photo/2015/04/20/13/18/animals-731213_150.jpg"
+                  alt="London"></div>
+              <div class="travel-city">
+                <h2>London</h2>
+                <div class="container">
+                  <img src="https://www.weatherbit.io/static/img/icons/c04n.png" alt="London">
+                  <span>Current weather: Overcast clouds</span>
+                </div>
+              </div>
+            </div>
+            <div class="travel-forecast">
+              <div class="flex-item">
+                <div>2/12</div><img src="https://www.weatherbit.io/static/img/icons/c04d.png" alt="Overcast clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/13</div><img src="https://www.weatherbit.io/static/img/icons/c04d.png" alt="Overcast clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/14</div><img src="https://www.weatherbit.io/static/img/icons/c04d.png" alt="Overcast clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/15</div><img src="https://www.weatherbit.io/static/img/icons/c04d.png" alt="Overcast clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/16</div><img src="https://www.weatherbit.io/static/img/icons/c04d.png" alt="Overcast clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/17</div><img src="https://www.weatherbit.io/static/img/icons/c03d.png" alt="Broken clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/18</div><img src="https://www.weatherbit.io/static/img/icons/c03d.png" alt="Broken clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/19</div><img src="https://www.weatherbit.io/static/img/icons/c03d.png" alt="Broken clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/20</div><img src="https://www.weatherbit.io/static/img/icons/c04d.png" alt="Overcast clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/21</div><img src="https://www.weatherbit.io/static/img/icons/c04d.png" alt="Overcast clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/22</div><img src="https://www.weatherbit.io/static/img/icons/c04d.png" alt="Overcast clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/23</div><img src="https://www.weatherbit.io/static/img/icons/c02d.png" alt="Few clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/24</div><img src="https://www.weatherbit.io/static/img/icons/c02d.png" alt="Scattered clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/25</div><img src="https://www.weatherbit.io/static/img/icons/c01d.png" alt="Clear Sky">
+              </div>
+              <div class="flex-item">
+                <div>2/26</div><img src="https://www.weatherbit.io/static/img/icons/c02d.png" alt="Scattered clouds">
+              </div>
+              <div class="flex-item">
+                <div>2/27</div><img src="https://www.weatherbit.io/static/img/icons/c01d.png" alt="Clear Sky">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>Minimalist App...</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/pikaday/pikaday.js"></script>
+  <script>
+    const pickerFrom = new Pikaday({
+      field: document.getElementById('from-date'),
+      minDate: new Date()
+    });
+    const pickerTo = new Pikaday({
+      field: document.getElementById('to-date'),
+      minDate: new Date()
+    });
+  </script>
+  <script>
+    // Check that service workers are supported
+    if ('serviceWorker' in navigator) {
+      // Use the window load event to keep the page load performant
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js');
+      });
+    }
+  </script>
+
+</body>
+
+</html>

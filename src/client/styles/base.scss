@@ -1,0 +1,141 @@
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-size: 14px;
+  font-family: 'Roboto', sans-serif;
+}
+
+h2 {
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+h3 {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+h4 {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+main {
+  flex: 2;
+}
+
+section {
+  max-width: 800px;
+  margin: 50px auto;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+.lowercase {
+  text-transform: lowercase;
+}
+
+.sentiment {
+  margin: 0 0 10px 10px;
+  padding-top: 10px;
+}
+
+.sentiment li {
+  margin-left: 10px;
+}
+
+.body {
+  padding: 0 40px
+}
+
+.travel-image {
+  width: 100%;
+  text-align: center;
+}
+
+.travel-city .container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+}
+
+.travel-city img {
+  width: 40px;
+}
+
+.travel-city h2 {
+  padding: 10px;
+  margin: 0;
+}
+
+.travel-info + h3 {
+  margin-top: 10px;
+}
+
+.travel-forecast {
+  padding: 0;
+  margin: 0;
+  -ms-box-orient: horizontal;
+  display: -webkit-box;
+  display: -moz-box;
+  display: -ms-flexbox;
+  display: -moz-flex;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+ .flex-item {
+  text-align: center;
+  width: 80px;
+  margin: 10px 1.89px 0 0;
+
+}
+
+.flex-item img {
+  width: 100%;
+}
+
+@media only screen and (min-width: 540px) {
+  h2 {
+    text-align: initial;
+    padding: 0 40px;
+  }
+
+  .travel-info {
+    display: flex;
+    margin-bottom: 20px;
+  }
+
+  .travel-image {
+    max-width: 150px;
+    text-align: initial;
+  }
+}
+
+@media only screen and (min-width: 820px) {
+  .body {
+    padding: 0;
+  }
+
+  h2 {
+    padding: 0;
+  }
+
+  h4 {
+    margin-top: 40px;
+  }  
+
+  .travel-forecast {
+    justify-content: left;
+  }
+}

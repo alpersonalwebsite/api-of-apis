@@ -1,0 +1,50 @@
+#input-data {
+  border-radius: 3px;
+  padding: 0 40px 0 40px;
+}
+
+input {
+  padding: 5px 20px;
+  width: 100%;
+  line-height: 16px;
+  margin: 10px 0;
+}
+
+@media only screen and (min-width: 820px) {
+  .block {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .block-submit {
+    justify-content: flex-end;
+  }
+
+  #input-data {
+    border: 1px solid #545454;
+    padding-bottom: 40px;
+  }
+
+  label {
+    font-size: 16px;
+    margin: 0 10px;
+    min-width: 50px;
+  }
+
+  label:nth-of-type(1) {
+    margin-left: 0;
+  }
+
+  input {
+    padding: 5px 20px;
+    width: 45%;
+    line-height: 16px;
+    margin: 10px 0;
+    max-width: 300px;
+  }
+
+  input[type=submit] {
+    max-width: 120px;
+  }
+}
