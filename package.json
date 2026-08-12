@@ -1,5 +1,5 @@
 {
-  "name": "travel-app",
+  "name": "api-of-apis",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -15,18 +15,15 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "One request fanned out to three public APIs (geonames, weatherbit, pixabay), composed server-side so the keys never reach the browser.",
   "dependencies": {
     "@babel/runtime": "^7.14.0",
     "body-parser": "^1.19.0",
-    "concurrently": "^6.2.0",
     "cors": "^2.8.5",
     "dotenv": "^8.6.0",
     "esm": "^3.2.25",
     "express": "^4.17.1",
-    "node-fetch": "^2.6.1",
-    "webpack": "^4.35.3",
-    "webpack-cli": "^3.3.5"
+    "node-fetch": "^2.6.1"
   },
   "devDependencies": {
     "@babel/core": "^7.14.3",
@@ -34,6 +31,7 @@
     "@babel/preset-env": "^7.14.2",
     "babel-loader": "^8.2.2",
     "clean-webpack-plugin": "^3.0.0",
+    "concurrently": "^6.2.0",
     "css-loader": "^5.2.6",
     "eslint": "^7.27.0",
     "eslint-config-prettier": "^8.3.0",
@@ -53,6 +51,8 @@
     "style-loader": "^2.0.0",
     "supertest": "^6.1.3",
     "terser-webpack-plugin": "^4.2.3",
+    "webpack": "^4.35.3",
+    "webpack-cli": "^3.3.5",
     "webpack-dev-server": "^3.7.2",
     "workbox-webpack-plugin": "^6.1.0"
   }
