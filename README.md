@@ -119,7 +119,7 @@ named `jest-html-reporter` in its `reporters` block, and that package is in **ne
 `package.json` nor `package-lock.json`. Jest resolves reporters before running anything, so
 `npm test` could not start at all.
 
-There are **84 tests** now, over eight suites, covering every fix above. Each one was
+There are **85 tests** now, over eight suites, covering every fix above. Each one was
 poison-tested: the fix was reverted and the suite checked to go red, so none of them passes
 vacuously.
 
@@ -167,6 +167,28 @@ hostile icon only to `forecastMin` left the current-weather allowlist untested, 
 `|| {}` that no test could exercise, because its only caller passes an already-normalised
 object and it is not exported. Reverting that guard left all 84 tests green, which is the
 signature of dead code rather than of a coverage gap. It was removed rather than tested.
+
+**A test can also be disabled by its environment.** The forecast-date test asserts `3/15` to
+guard the switch from local to UTC getters, and in the UTC zone the two are identical by
+definition, so nothing can tell them apart. Measured: with the fix reverted, `TZ=UTC` passed
+all 84 tests while `TZ=America/New_York` failed one. The test only ever caught anything because
+this machine is `America/Los_Angeles`; a UTC CI runner, which is the default nearly everywhere,
+would have sailed through.
+
+`jest.config.js` therefore pins `process.env.TZ = 'America/New_York'`. Three things about that
+are worth stating, because each is a trap:
+
+- **Pinning UTC would be the intuitive choice and exactly wrong**, since it makes the test
+  permanently blind to the bug it exists to catch.
+- **It has to be in the config, not `jest.setup.js`.** Setting `process.env.TZ` from a setup
+  file is too late on Node 24 and has no effect: measured, the poisoned fix still passed 84/84
+  under `TZ=UTC` with the setup file pinning New York.
+- **The pin itself is guarded**, by a test asserting the process is in a non-UTC zone.
+  Otherwise removing the pin would silently disable the timezone test rather than break
+  anything. Verified: changing the pin to `UTC` fails that guard.
+
+With the pin in place the poisoned fix is caught under every host zone tried: `UTC`,
+`America/Los_Angeles`, `Asia/Tokyo` and `Europe/London`.
 
 All ten guarded values in `markup.js` are now poison-tested individually, and each one fails
 on its own.
