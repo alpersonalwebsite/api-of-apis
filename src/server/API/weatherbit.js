@@ -57,14 +57,20 @@ const weatherGetCity = async (weatherAPIBaseObject, cityObj, dates) => {
 
   const requiredProperties = ['baseURL', 'apiKey']
 
-  const currentWeather = await getRequest(weatherAPI, 'current', requiredProperties, weatherAPIBaseObject, cityObj)
+  // The config passed in is the one used, not the module-level weatherAPI. It used to
+  // validate the argument and then build the URL from the module constant, so a caller could
+  // hand in a perfectly good object and have it ignored. That also made this function
+  // untestable without setting process.env before importing the module.
+  const config = weatherAPIBaseObject || weatherAPI
+
+  const currentWeather = await getRequest(config, 'current', requiredProperties, config, cityObj)
 
   const extraParameters = `&days=${days}`
   const forecastWeather = await getRequest(
-    weatherAPI,
+    config,
     'forecast/daily',
     requiredProperties,
-    weatherAPIBaseObject,
+    config,
     cityObj,
     extraParameters
   )
