@@ -50,8 +50,15 @@ const getRequest = async (
 
     return res
   } catch (err) {
+    // Re-thrown, not returned. This used to `return err`, which meant a network failure or a
+    // bad JSON body left an Error object standing in for a response. Downstream that error
+    // reached validateResponse and the parsers, so a geonames outage produced a false 404
+    // ("We do not have that city in our records") and a weatherbit or pixabay outage produced
+    // a 200 with empty fallback data. Measured before this change, with node-fetch rejecting:
+    // POST /api/travels answered 404. The route's try/catch turns a throw into a 502, which is
+    // the honest answer for "an upstream service failed".
     console.log(`ERROR: weatherGetCity - ${err}`)
-    return err
+    throw err instanceof Error ? err : new Error(String(err))
   }
 }
 
@@ -97,11 +104,15 @@ const weatherGetCity = async (weatherAPIBaseObject, cityObj, dates) => {
 // dead process on Node 15+.
 const parsedWeatherGetCity = (apiResponse = {}) => {
   const days = apiResponse && apiResponse.days
+  // Elements are checked, not just the arrays. An upstream response can carry
+  // `data: [null]`, and `currentData[0].weather` or destructuring a null element throws,
+  // which defeats the whole point of returning a documented fallback.
+  const isObj = (v) => v !== null && typeof v === 'object'
   const currentData = apiResponse && apiResponse.current && apiResponse.current.data
-  const currentMin = Array.isArray(currentData) && currentData.length > 0 ? currentData[0].weather : null
+  const currentMin = Array.isArray(currentData) && isObj(currentData[0]) ? currentData[0].weather : null
   const forecastData = apiResponse && apiResponse.forecast && apiResponse.forecast.data
   let forecastMin = []
-  for (let element of Array.isArray(forecastData) ? forecastData : []) {
+  for (let element of (Array.isArray(forecastData) ? forecastData : []).filter(isObj)) {
     const { datetime, temp, weather } = element
     forecastMin.push({
       date: datetime,

@@ -23,8 +23,15 @@ const pixaGetCityImage = async (pixaAPIBaseObject, city) => {
     const res = await req.json()
     return res
   } catch (err) {
+    // Re-thrown, not returned. This used to `return err`, which meant a network failure or a
+    // bad JSON body left an Error object standing in for a response. Downstream that error
+    // reached validateResponse and the parsers, so a geonames outage produced a false 404
+    // ("We do not have that city in our records") and a weatherbit or pixabay outage produced
+    // a 200 with empty fallback data. Measured before this change, with node-fetch rejecting:
+    // POST /api/travels answered 404. The route's try/catch turns a throw into a 502, which is
+    // the honest answer for "an upstream service failed".
     console.log(`ERROR: pixaGetCityImage - ${err}`)
-    return err
+    throw err instanceof Error ? err : new Error(String(err))
   }
 }
 

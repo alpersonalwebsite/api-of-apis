@@ -70,6 +70,21 @@ async function handleTravels(req, res) {
     return
   }
 
+  // Type alone was not enough: 'invalid' is a string, and so is a toDate that precedes
+  // fromDate. Both used to pass straight through to the date arithmetic, where
+  // getDiffDatesInDays produced NaN or a negative day count and sent it to weatherbit as
+  // &days=NaN.
+  const from = new Date(dates.fromDate)
+  const to = new Date(dates.toDate)
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+    res.status(400).send({ error: { type: 'dates', msg: 'fromDate and toDate must be valid dates.' } })
+    return
+  }
+  if (to.getTime() < from.getTime()) {
+    res.status(400).send({ error: { type: 'dates', msg: 'toDate must not precede fromDate.' } })
+    return
+  }
+
   const geoData = await geoGetCityInfo(geoAPI, city)
   // validateResponse returns true for a usable answer now. It used to return false or
   // undefined and never true, so this had to be written as `=== false`; anything more
