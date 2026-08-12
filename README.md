@@ -119,7 +119,7 @@ named `jest-html-reporter` in its `reporters` block, and that package is in **ne
 `package.json` nor `package-lock.json`. Jest resolves reporters before running anything, so
 `npm test` could not start at all.
 
-There are **64 tests** now, over seven suites, covering every fix above. Each one was
+There are **84 tests** now, over eight suites, covering every fix above. Each one was
 poison-tested: the fix was reverted and the suite checked to go red, so none of them passes
 vacuously.
 
@@ -163,6 +163,11 @@ those `alt` attributes needs a *valid* icon with a hostile description. Likewise
 hostile icon only to `forecastMin` left the current-weather allowlist untested, since
 `currentMin.icon` only ever saw `c02d`.
 
+**And a guard nothing can reach is not defence, it is noise.** `markupCity` was given a
+`|| {}` that no test could exercise, because its only caller passes an already-normalised
+object and it is not exported. Reverting that guard left all 84 tests green, which is the
+signature of dead code rather than of a coverage gap. It was removed rather than tested.
+
 All ten guarded values in `markup.js` are now poison-tested individually, and each one fails
 on its own.
 
@@ -192,7 +197,7 @@ Lint is clean now too; it was not. `npx eslint src` reported 3 errors on `master
 
 Three API keys are needed, all free:
 
-1. [Geonames](http://www.geonames.org/export/web-services.html) — a username, not a key
+1. [Geonames](https://www.geonames.org/export/web-services.html) — a username, not a key
 2. [Weatherbit](https://www.weatherbit.io/account/create)
 3. [Pixabay](https://pixabay.com/api/docs/)
 
@@ -213,11 +218,23 @@ npm run prod:build
 npm run prod:start     # PORT is honoured, defaulting to 8085
 ```
 
-Optionally, if the bundle is served from a different origin than the API:
+### If the bundle and the API are on different origins
 
-```shell
-CORS_ORIGIN=https://your-site.example npm run prod:start
-```
+`CORS_ORIGIN` alone does **not** achieve this, and an earlier version of this README implied it
+did. The client posts to `/api/travels`, a root-relative path, so the browser always sends it to
+whichever origin served the bundle. `CORS_ORIGIN` authorises an origin on the API side; it does
+not change where the request goes.
+
+So a split deployment needs one of:
+
+- **A reverse proxy** on the bundle's origin forwarding `/api` to the API server. Nothing
+  changes in this code, and `CORS_ORIGIN` is not needed either, because the browser still sees
+  one origin.
+- **An absolute API base URL** compiled into the client, which this project does not have. That
+  is the change to make if you want a genuinely separate API host, and then `CORS_ORIGIN` on the
+  server is what authorises it.
+
+`CORS_ORIGIN` is still worth setting if something other than this bundle calls the API.
 
 ### Node 14 to 20. Not 22 or newer.
 

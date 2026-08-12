@@ -56,3 +56,23 @@ describe('parsers still parse a good response', () => {
     expect(res.forecastMin).toEqual([{ date: '2021-03-15', temp: 10.2, weather: { icon: 'c04d' } }])
   })
 })
+
+describe('parsers survive null ELEMENTS, not just missing arrays', () => {
+  it('weatherbit tolerates current.data: [null]', () => {
+    expect(() => parsedWeatherGetCity({ current: { data: [null] }, forecast: { data: [] } })).not.toThrow()
+    expect(parsedWeatherGetCity({ current: { data: [null] }, forecast: { data: [] } }).currentMin).toBeNull()
+  })
+
+  it('weatherbit skips null forecast elements rather than destructuring them', () => {
+    const res = parsedWeatherGetCity({
+      current: { data: [] },
+      forecast: { data: [null, { datetime: '2021-03-15', temp: 9, weather: { icon: 'c01d' } }, null] }
+    })
+    expect(res.forecastMin).toHaveLength(1)
+    expect(res.forecastMin[0].date).toBe('2021-03-15')
+  })
+
+  it('weatherbit tolerates a primitive inside the arrays', () => {
+    expect(() => parsedWeatherGetCity({ current: { data: ['x'] }, forecast: { data: [42] } })).not.toThrow()
+  })
+})

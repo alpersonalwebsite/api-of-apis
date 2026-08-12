@@ -166,6 +166,51 @@ describe('generateMarkup escapes every sink', () => {
     noHandlers(node)
   })
 
+  // The route's own documented fallback for a weatherbit response with no current data is
+  // currentMin: null, and route.test.js's happy-path fixture returns exactly that. A default
+  // parameter only fires for undefined, so null reached data.icon and threw
+  // TypeError: Cannot read properties of null.
+  it.each([
+    ['currentMin null', { days: { days: 2 }, currentMin: null, forecastMin: [] }],
+    ['weather null', null],
+    ['forecastMin null', { days: { days: 2 }, currentMin: { icon: 'c02d' }, forecastMin: null }],
+    ['days null', { days: null, currentMin: { icon: 'c02d' }, forecastMin: [] }]
+  ])('renders with %s instead of throwing', (_label, weather) => {
+    expect(() => generateMarkup(element, data({ weather }))).not.toThrow()
+  })
+
+  // generateMarkup itself, not just its sections. The `|| {}` on the whole payload guards the
+  // case where the fetch resolved to null or the response had no body; nothing exercised it,
+  // so reverting it to a bare `const safe = data` left all 80 tests green.
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+    ['a string', 'nope'],
+    ['a number', 0]
+  ])('renders with a payload of %s instead of throwing', (_label, payload) => {
+    expect(() => generateMarkup(element, payload)).not.toThrow()
+  })
+
+  it('renders with a null city and null photos', () => {
+    expect(() => generateMarkup(element, data({ city: null, photos: null }))).not.toThrow()
+  })
+
+  // new Date('2021-03-15') is UTC midnight, so the local getters report 14 March anywhere
+  // west of UTC. The date shown must not depend on the reader's time zone.
+  it('shows the forecast date in UTC, not the local shift', () => {
+    const node = generateMarkup(
+      element,
+      data({
+        weather: {
+          days: { days: 1 },
+          currentMin: { icon: 'c02d', description: 'ok' },
+          forecastMin: [{ date: '2021-03-15', temp: 10, weather: { icon: 'c04d', description: 'ok' } }]
+        }
+      })
+    )
+    expect(node.querySelector('.travel-forecast .flex-item div').textContent).toBe('3/15')
+  })
+
   it('survives an empty photos array, which pixabay returns for obscure queries', () => {
     const node = generateMarkup(element, data({ photos: [] }))
     expect(node.querySelectorAll('.travel-image img').length).toBe(0)

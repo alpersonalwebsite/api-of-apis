@@ -1,5 +1,5 @@
 {
-  "name": "api-of-apis",
+  "name": "travel-app",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -15,7 +15,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "One request fanned out to three public APIs (geonames, weatherbit, pixabay), composed server-side so the keys never reach the browser.",
+  "description": "One request fanned out to three public APIs (geonames, weatherbit, pixabay), composed server-side so the keys never reach the browser. Package name left as travel-app to match package-lock.json: renaming it would require regenerating the lockfile, which re-resolves the ^ ranges and upgrades 17 transitive packages.",
   "dependencies": {
     "@babel/runtime": "^7.14.0",
     "body-parser": "^1.19.0",

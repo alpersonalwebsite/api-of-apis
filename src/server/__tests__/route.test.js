@@ -132,3 +132,30 @@ describe('CORS', () => {
     expect(res.headers['access-control-allow-origin']).not.toBe('*')
   })
 })
+
+describe('date validation', () => {
+  const withDates = (fromDate, toDate) => ({ city: 'London', dates: { fromDate, toDate } })
+
+  it('rejects unparseable dates', async () => {
+    for (const bad of [
+      ['invalid', '2021-03-17'],
+      ['2021-03-15', 'nonsense'],
+      ['', '']
+    ]) {
+      const res = await request(app).post('/api/travels').send(withDates(bad[0], bad[1]))
+      expect(res.status).toBe(400)
+      expect(res.body.error.type).toBe('dates')
+    }
+  })
+
+  it('rejects a reversed range', async () => {
+    const res = await request(app).post('/api/travels').send(withDates('2021-03-17', '2021-03-15'))
+    expect(res.status).toBe(400)
+    expect(res.body.error.msg).toMatch(/precede/)
+  })
+
+  it('accepts a single-day range', async () => {
+    const res = await request(app).post('/api/travels').send(withDates('2021-03-15', '2021-03-15'))
+    expect(res.status).toBe(200)
+  })
+})
