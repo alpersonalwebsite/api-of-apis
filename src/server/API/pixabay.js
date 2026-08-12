@@ -1,6 +1,7 @@
 import dotenv from 'dotenv'
 dotenv.config({})
 import fetch from 'node-fetch'
+import { describeError } from '../utils/logging'
 import { validatePropertiesObj } from '../validations/index'
 
 const pixaAPI = {
@@ -30,7 +31,7 @@ const pixaGetCityImage = async (pixaAPIBaseObject, city) => {
     // a 200 with empty fallback data. Measured before this change, with node-fetch rejecting:
     // POST /api/travels answered 404. The route's try/catch turns a throw into a 502, which is
     // the honest answer for "an upstream service failed".
-    console.log(`ERROR: pixaGetCityImage - ${err}`)
+    console.log(describeError('pixaGetCityImage', err))
     throw err instanceof Error ? err : new Error(String(err))
   }
 }

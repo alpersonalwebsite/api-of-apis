@@ -61,3 +61,37 @@ describe('a real upstream failure reaches the error middleware', () => {
     process.env.GEONAMES_API_KEY = 'k'
   })
 })
+
+describe('no log line carries the credential', () => {
+  // End to end through the REAL modules: node-fetch rejects with a message containing the URL,
+  // and nothing written to the console may contain the key. Before the redaction both the module
+  // log and app.js's err.stack line reproduced it verbatim.
+  it('logs neither the key nor the request URL on an upstream failure', async () => {
+    const written = []
+    const log = jest.spyOn(console, 'log').mockImplementation((m) => written.push(String(m)))
+    const err = jest.spyOn(console, 'error').mockImplementation((m) => written.push(String(m)))
+
+    fetch.mockRejectedValue(
+      new Error('request to https://secure.geonames.org/searchJSON?q=London&username=k failed, reason: ENOTFOUND')
+    )
+    const res = await request(app).post('/api/travels').send(body)
+    expect(res.status).toBe(502)
+
+    log.mockRestore()
+    err.mockRestore()
+
+    expect(written.length).toBeGreaterThan(0)
+    for (const line of written) {
+      expect(line).not.toContain('username=')
+      expect(line).not.toContain('key=')
+      expect(line).not.toContain('http')
+    }
+  })
+
+  it('does not leak the key through the HTTP response either', async () => {
+    fetch.mockRejectedValue(new Error('request to https://x/?key=k failed'))
+    const res = await request(app).post('/api/travels').send(body)
+    expect(JSON.stringify(res.body)).not.toContain('http')
+    expect(JSON.stringify(res.body)).not.toContain('key=')
+  })
+})

@@ -159,3 +159,28 @@ describe('date validation', () => {
     expect(res.status).toBe(200)
   })
 })
+
+describe('calendar-invalid dates', () => {
+  const withDates = (fromDate, toDate) => ({ city: 'London', dates: { fromDate, toDate } })
+
+  // new Date('2021-02-30') does not throw, it normalises to 2 March 2021. So a date that does
+  // not exist used to pass validation and become a real trip.
+  it.each([
+    ['30 February', '2021-02-30'],
+    ['31 April', '2021-04-31'],
+    ['month 13', '2021-13-01'],
+    ['day 32', '2021-01-32'],
+    ['29 February in a non-leap year', '2021-02-29'],
+    ['not zero-padded', '2021-3-5'],
+    ['a full timestamp', '2021-03-15T00:00:00Z']
+  ])('rejects %s', async (_label, bad) => {
+    const res = await request(app).post('/api/travels').send(withDates(bad, '2021-03-17'))
+    expect(res.status).toBe(400)
+    expect(res.body.error.type).toBe('dates')
+  })
+
+  it('accepts 29 February in a leap year', async () => {
+    const res = await request(app).post('/api/travels').send(withDates('2020-02-29', '2020-03-01'))
+    expect(res.status).toBe(200)
+  })
+})

@@ -4,6 +4,7 @@ import bodyParser from 'body-parser'
 import cors from 'cors'
 
 import { validateResponse } from './validations/index'
+import { describeError } from './utils/logging'
 
 import { geoAPI, geoGetCityInfo, parsedGeoGetCityInfo } from './API/geonames'
 import { weatherAPI, weatherGetCity, parsedWeatherGetCity } from './API/weatherbit'
@@ -74,10 +75,31 @@ async function handleTravels(req, res) {
   // fromDate. Both used to pass straight through to the date arithmetic, where
   // getDiffDatesInDays produced NaN or a negative day count and sent it to weatherbit as
   // &days=NaN.
-  const from = new Date(dates.fromDate)
-  const to = new Date(dates.toDate)
-  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
-    res.status(400).send({ error: { type: 'dates', msg: 'fromDate and toDate must be valid dates.' } })
+  // Strict, because `new Date` normalises rather than rejecting: new Date('2021-02-30') is
+  // 2 March 2021, so a calendar-invalid date passed validation and became a real trip. The
+  // reconstructed components have to match what was asked for.
+  const parseCalendarDate = (value) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value))
+    if (!m) return null
+    const [, y, mo, d] = m
+    const date = new Date(`${y}-${mo}-${d}T00:00:00Z`)
+    if (Number.isNaN(date.getTime())) return null
+    if (
+      date.getUTCFullYear() !== Number(y) ||
+      date.getUTCMonth() + 1 !== Number(mo) ||
+      date.getUTCDate() !== Number(d)
+    ) {
+      return null
+    }
+    return date
+  }
+
+  const from = parseCalendarDate(dates.fromDate)
+  const to = parseCalendarDate(dates.toDate)
+  if (!from || !to) {
+    res.status(400).send({
+      error: { type: 'dates', msg: 'fromDate and toDate must be real calendar dates as YYYY-MM-DD.' }
+    })
     return
   }
   if (to.getTime() < from.getTime()) {
@@ -127,7 +149,9 @@ async function handleTravels(req, res) {
 // whatever it threw into a 502.
 // eslint-disable-next-line no-unused-vars
 app.use(function (err, req, res, next) {
-  console.error(`ERROR: /api/travels - ${err && err.stack ? err.stack : err}`)
+  // NOT err.stack, and not `${err}`. Both carry node-fetch's message, which carries the
+  // request URL, which carries the API key.
+  console.error(describeError('/api/travels', err))
   if (res.headersSent) return
   res.status(502).send({
     error: { type: 'upstream', msg: 'An upstream service failed or returned an unexpected response.' }
