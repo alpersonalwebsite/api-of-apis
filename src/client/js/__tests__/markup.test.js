@@ -89,19 +89,27 @@ describe('generateMarkup escapes every sink', () => {
     expect(window.__pwned).toBeUndefined()
   })
 
-  it('escapes the forecast description and drops a hostile icon code', () => {
+  // Both icon sinks, not just the forecast one. markupWeather and markupWeatherForecast each
+  // build src="https://.../icons/${icon}.png" with the icon allowlisted rather than escaped,
+  // so the allowlist is that value's only protection. A reviewer removed the current-weather
+  // allowlist alone and all 63 tests stayed green, because this fixture only ever fed the
+  // hostile value to forecastMin[].weather.icon while currentMin.icon stayed 'c02d'. The DOM
+  // probe on that poison showed a real IMG[onerror] attribute being created.
+  it('drops a hostile icon code in both the current and forecast sinks', () => {
     const node = generateMarkup(
       element,
       data({
         weather: {
-          ...data().weather,
+          days: { days: 2 },
+          currentMin: { icon: ATTR, description: 'Scattered clouds' },
           forecastMin: [{ date: '2021-03-15', temp: 10, weather: { icon: ATTR, description: ATTR } }]
         }
       })
     )
     noHandlers(node)
-    // The icon is allowlisted, not escaped, so a hostile code yields no img at all.
+    // Allowlisted, not escaped, so a hostile code yields no img at all in either place.
     expect(node.querySelectorAll('.travel-forecast img').length).toBe(0)
+    expect(node.querySelectorAll('.container img').length).toBe(0)
   })
 
   // The warning is interpolated into element content, so TEXT is the payload that matters.
@@ -117,6 +125,29 @@ describe('generateMarkup escapes every sink', () => {
     )
     noHandlers(node)
     expect(node.textContent).toContain(payload)
+    expect(window.__pwned).toBeUndefined()
+  })
+
+  // A VALID icon with a hostile description, which is the only way to reach the alt beside it.
+  // When the icon is hostile the allowlist drops the whole <img>, so the alt never renders and
+  // removing its escaping is invisible: measured, that poison left all 63 tests green. A guard
+  // that short-circuits hides every guard downstream of it.
+  it('escapes the alt beside a valid icon, in both weather sinks', () => {
+    const node = generateMarkup(
+      element,
+      data({
+        city: { name: ATTR, lat: '1', lng: '2' },
+        weather: {
+          days: { days: 2 },
+          currentMin: { icon: 'c02d', description: ATTR },
+          forecastMin: [{ date: '2021-03-15', temp: 10, weather: { icon: 'c04d', description: ATTR } }]
+        }
+      })
+    )
+    // Both imgs must exist, or this test never reaches the alt attributes at all.
+    expect(node.querySelectorAll('.container img').length).toBe(1)
+    expect(node.querySelectorAll('.travel-forecast img').length).toBe(1)
+    noHandlers(node)
     expect(window.__pwned).toBeUndefined()
   })
 

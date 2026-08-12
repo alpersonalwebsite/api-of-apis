@@ -119,7 +119,7 @@ named `jest-html-reporter` in its `reporters` block, and that package is in **ne
 `package.json` nor `package-lock.json`. Jest resolves reporters before running anything, so
 `npm test` could not start at all.
 
-There are **63 tests** now, over seven suites, covering every fix above. Each one was
+There are **64 tests** now, over seven suites, covering every fix above. Each one was
 poison-tested: the fix was reverted and the suite checked to go red, so none of them passes
 vacuously.
 
@@ -129,11 +129,16 @@ vacuously.
 | `current/daily` instead of `current` | 1 |
 | `validateResponse` returning `undefined` | 9 |
 | removing the Express error middleware | 6 |
-| `escapeHTML` removed from the `<h2>` | 1 |
-| `safeURL` removed from the photo `src` | 2 |
-| `escapeHTML` removed from the weather description | 1 |
-| the forecast icon allowlist removed | 1 |
-| `escapeHTML` removed from the days warning | 1 |
+| `escapeHTML` off the `<h2>` city name | 1 |
+| `safeURL` off the photo `src` | 2 |
+| `escapeHTML` off the photo `alt` | 2 |
+| the **current-weather** icon allowlist off | 1 |
+| `escapeHTML` off the current-weather `alt` | 2 |
+| `escapeHTML` off the weather description | 1 |
+| the **forecast** icon allowlist off | 1 |
+| `escapeHTML` off the forecast `alt` | 1 |
+| `escapeHTML` off the days warning | 1 |
+| the empty-photos guard off | 1 |
 | allowing any URL scheme in `safeURL` | 2 |
 | parser throwing on an empty response | 4 |
 
@@ -143,11 +148,23 @@ then removed `escapeHTML` from the `<h2>` and all tests still passed, because no
 exercised `markup.js` itself. `markup.test.js` closes that by running `generateMarkup` and
 inspecting the parsed DOM for inline event handlers and injected elements.
 
-Getting that test right needed two payloads, and the first version of it was worthless with
-one. A single-quote payload cannot break out of a double-quoted attribute, so with only
-`x' onerror='...` the suite stayed green through four separate sink regressions. It now uses
-`x" onerror="...` for attribute contexts and `<img src=x onerror="...">` for element content,
-and every sink regression is caught.
+Getting that test right took three passes, and the first two looked finished while guarding
+almost nothing. Both failures are worth stating because they generalise:
+
+**The payload has to match the context.** A single-quote payload cannot break out of a
+double-quoted attribute, so with only `x' onerror='...` the suite stayed green through four
+separate sink regressions. It now uses `x" onerror="...` for attribute contexts and
+`<img src=x onerror="...">` for element content.
+
+**A guard that short-circuits hides every guard behind it.** Two sinks were still unguarded
+after that. The icon allowlist drops the whole `<img>` when the icon is hostile, so an `alt`
+beside a hostile icon never renders at all and removing its escaping is invisible. Reaching
+those `alt` attributes needs a *valid* icon with a hostile description. Likewise, feeding the
+hostile icon only to `forecastMin` left the current-weather allowlist untested, since
+`currentMin.icon` only ever saw `c02d`.
+
+All ten guarded values in `markup.js` are now poison-tested individually, and each one fails
+on its own.
 
 One poison deliberately does *not* fail: reverting the attributes to single quotes while
 keeping `escapeHTML`. That is correct rather than a gap, since `escapeHTML` escapes both `'`
