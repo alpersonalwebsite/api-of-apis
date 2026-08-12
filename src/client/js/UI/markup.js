@@ -62,7 +62,17 @@ const markupWeather = (rawData = {}, altForPhoto = '') => {
 const markupWeatherForecast = (forecast = []) => {
   let markup = '<div class="travel-forecast">'
   for (let element of Array.isArray(forecast) ? forecast : []) {
-    const tempDate = new Date(element.date)
+    // A forecast object can arrive with a missing or unparseable datetime. The server parser
+    // filters null and primitive ENTRIES but does not inspect the date inside a valid object,
+    // so this loop used to render NaN/NaN.
+    // The date must be a non-empty string BEFORE constructing a Date, because new Date(null)
+    // is 1 January 1970 rather than an Invalid Date, and new Date(0) is too. Checking only
+    // getTime() for NaN let a null datetime render as 1/1. Measured:
+    //   new Date(null) -> 1970-01-01   new Date('') -> Invalid   new Date(0) -> 1970-01-01
+    const rawDate = element && element.date
+    if (typeof rawDate !== 'string' || rawDate.trim() === '') continue
+    const tempDate = new Date(rawDate)
+    if (Number.isNaN(tempDate.getTime())) continue
     markup += `<div class="flex-item">`
     // UTC getters. `new Date('2021-03-15')` is parsed as UTC midnight, and the local getters
     // then report 14 March anywhere west of UTC. The original used getMonth(), which was also

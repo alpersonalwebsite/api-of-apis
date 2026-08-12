@@ -119,7 +119,7 @@ named `jest-html-reporter` in its `reporters` block, and that package is in **ne
 `package.json` nor `package-lock.json`. Jest resolves reporters before running anything, so
 `npm test` could not start at all.
 
-There are **85 tests** now, over eight suites, covering every fix above. Each one was
+There are **109 tests** now, over nine suites, covering every fix above. Each one was
 poison-tested: the fix was reverted and the suite checked to go red, so none of them passes
 vacuously.
 
@@ -215,9 +215,34 @@ Three things about the setup are worth knowing before adding tests, because each
 
 Lint is clean now too; it was not. `npx eslint src` reported 3 errors on `master`.
 
+### API keys were being written to the logs
+
+`node-fetch@2.6.1` puts the full request URL into its error messages, and every URL this project
+builds carries a credential in the query string. Measured on the pinned version:
+
+```text
+request to https://…/x?key=SUPERSECRETKEY123 failed, reason: getaddrinfo ENOTFOUND …
+invalid json response body at https://…/?key=SUPERSECRETKEY123 reason: Unexpected token …
+```
+
+All four log boundaries interpolated the error, so every network failure and every non-JSON
+response wrote an API key to the log. Three of those log lines were original; the fourth was
+mine, and it was the worst of them, because `err.stack` includes the message.
+
+Errors now go through `describeError`, which emits only the operation name, the error's `name`,
+and its `code` or `type`:
+
+```text
+geoGetCityInfo: FetchError (code: ENOTFOUND)
+```
+
+Tested from both ends: `describeError` against six error shapes including a thrown string and
+`null`, and end-to-end through the real modules, asserting that nothing written to `console` and
+nothing in the HTTP response contains `http`, `key=` or `username=`.
+
 ## Running it
 
-Three API keys are needed, all free:
+Three API credentials are needed, all free. Note that geonames issues a **username**, not a key:
 
 1. [Geonames](https://www.geonames.org/export/web-services.html) — a username, not a key
 2. [Weatherbit](https://www.weatherbit.io/account/create)
@@ -229,7 +254,7 @@ Copy `.env-example` to `.env` and fill in the three values. `.env` is gitignored
 npm install
 
 npm run dev            # webpack-dev-server plus the API server
-npm test               # 51 tests
+npm test               # 109 tests
 npm run lint
 ```
 

@@ -222,6 +222,52 @@ describe('generateMarkup escapes every sink', () => {
 // jest.config.js is load-bearing. Without this, removing the pin would silently disable that
 // test rather than break anything, which is the same failure shape as a test whose payload
 // cannot escape its context.
+describe('forecast entries with unusable dates', () => {
+  // The server parser filters null and primitive ENTRIES but does not look inside a valid
+  // object, so an entry with a missing or unparseable datetime reached this loop and rendered
+  // NaN/NaN.
+  it.each([
+    ['a missing date', undefined],
+    ['an empty date', ''],
+    ['an unparseable date', 'not-a-date'],
+    ['a null date', null],
+    ['a numeric zero date', 0],
+    ['a numeric timestamp', 1615766400000]
+  ])('skips an entry with %s rather than rendering NaN', (_label, date) => {
+    const node = generateMarkup(
+      element,
+      data({
+        weather: {
+          days: { days: 1 },
+          currentMin: { icon: 'c02d', description: 'ok' },
+          forecastMin: [{ date, temp: 9, weather: { icon: 'c01d', description: 'ok' } }]
+        }
+      })
+    )
+    expect(node.textContent).not.toContain('NaN')
+    expect(node.querySelectorAll('.travel-forecast .flex-item').length).toBe(0)
+  })
+
+  it('keeps the valid entries alongside an invalid one', () => {
+    const node = generateMarkup(
+      element,
+      data({
+        weather: {
+          days: { days: 2 },
+          currentMin: { icon: 'c02d', description: 'ok' },
+          forecastMin: [
+            { date: 'nonsense', temp: 1, weather: { icon: 'c01d', description: 'a' } },
+            { date: '2021-03-16', temp: 2, weather: { icon: 'c01d', description: 'b' } }
+          ]
+        }
+      })
+    )
+    expect(node.textContent).not.toContain('NaN')
+    expect(node.querySelectorAll('.travel-forecast .flex-item').length).toBe(1)
+    expect(node.textContent).toContain('3/16')
+  })
+})
+
 describe('the test environment itself', () => {
   it('runs in a non-UTC timezone, or the UTC date test cannot fail', () => {
     const offset = new Date('2021-03-15T00:00:00Z').getTimezoneOffset()
