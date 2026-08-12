@@ -1,7 +1,6 @@
 import { validateData } from '../validations/index'
 
 const postDataToBackend = async (url, data) => {
-
   validateData('object', data)
 
   try {

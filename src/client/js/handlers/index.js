@@ -3,7 +3,6 @@ import { generateMarkup, addMarkup } from '../UI/markup'
 import { shouldNotBeEmpty } from '../validations/index'
 
 const onClickHandler = async () => {
-
   const fromPlace = document.querySelector('input[id="from-place"]').value
   const toPlace = document.querySelector('input[id="to-place"]').value
   const fromDate = document.querySelector('input[id="from-date"]').value
@@ -17,7 +16,11 @@ const onClickHandler = async () => {
 
   const emptyInputs = shouldNotBeEmpty(inputsMapping)
   if (emptyInputs !== 0) return
-  const data = await postDataToBackend('http://localhost:8085/api/travels', {
+  // A relative path, not http://localhost:8085. The built bundle is served BY this server,
+  // so a same-origin path works in development and wherever it is deployed. The absolute
+  // localhost URL meant the production bundle could only ever talk to the developer's own
+  // machine, and it is what forced the wide-open CORS the server used to have.
+  const data = await postDataToBackend('/api/travels', {
     city: toPlace,
     dates: { fromDate, toDate }
   })
