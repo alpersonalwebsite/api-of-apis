@@ -27,9 +27,16 @@ const getRequest = async (
 
     // Two bugs were in this one line.
     //
-    // 1. `lat=${lat}6` appended a stray 6 to every latitude. Measured: a lat of 40.7128
-    //    was sent as 40.71286. It never errored, it just asked about the wrong place, and
-    //    how wrong depended on how many decimals the coordinate happened to have.
+    // 1. `lat=${lat}6` appended a stray 6 to every latitude, and the damage scales inversely
+    //    with precision, so quoting a high-precision example understates it badly:
+    //
+    //      40.7128 -> 40.71286   0.0001 deg, about 11 m
+    //      51.5    -> 51.56      0.06 deg,   about 6.7 km
+    //      4       -> 46         42 deg,     about 4,700 km
+    //      0       -> 6          6 deg
+    //
+    //    geonames returns whatever precision it has, so a low-precision latitude asked
+    //    about a different continent. It never errored either way.
     //
     // 2. `${api}/daily` is only correct for one of the two callers. Per Weatherbit's docs
     //    the current-conditions endpoint is `/v2.0/current` and there is no

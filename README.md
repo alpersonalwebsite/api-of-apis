@@ -26,9 +26,18 @@ the request URL, and it had two bugs:
 `${baseURL}${api}/daily?key=${apiKey}&lat=${lat}6&lon=${lng}`
 ```
 
-The `6` after `${lat}` appended a digit to every latitude. Measured: a latitude of `40.7128`
-was sent as `lat=40.71286`. Nothing errored, the API simply answered about somewhere else,
-and how far off depended on how many decimal places the coordinate happened to have.
+The `6` after `${lat}` appended a digit to every latitude, and how bad that is depends
+inversely on precision, so the high-precision example is the least alarming one:
+
+| latitude | sent as | shift |
+| --- | --- | --- |
+| `40.7128` | `40.71286` | 0.0001°, about 11 m |
+| `51.5` | `51.56` | 0.06°, about 6.7 km |
+| `4` | `46` | 42°, about 4,700 km |
+| `0` | `6` | 6° |
+
+geonames returns whatever precision it holds for a place, so a low-precision latitude asked
+about a different continent. Nothing errored in any case.
 
 `${api}/daily` was also only right for one of its two callers. Per Weatherbit's
 documentation the current-conditions endpoint is `/v2.0/current` and **there is no
@@ -110,7 +119,7 @@ named `jest-html-reporter` in its `reporters` block, and that package is in **ne
 `package.json` nor `package-lock.json`. Jest resolves reporters before running anything, so
 `npm test` could not start at all.
 
-There are **51 tests** now, over six suites, covering every fix above. Each one was
+There are **63 tests** now, over seven suites, covering every fix above. Each one was
 poison-tested: the fix was reverted and the suite checked to go red, so none of them passes
 vacuously.
 
@@ -120,9 +129,30 @@ vacuously.
 | `current/daily` instead of `current` | 1 |
 | `validateResponse` returning `undefined` | 9 |
 | removing the Express error middleware | 6 |
-| unescaped HTML | 3 |
-| allowing any URL scheme in `src` | 2 |
+| `escapeHTML` removed from the `<h2>` | 1 |
+| `safeURL` removed from the photo `src` | 2 |
+| `escapeHTML` removed from the weather description | 1 |
+| the forecast icon allowlist removed | 1 |
+| `escapeHTML` removed from the days warning | 1 |
+| allowing any URL scheme in `safeURL` | 2 |
 | parser throwing on an empty response | 4 |
+
+**The escaping helpers and their application are tested separately, because passing one does
+not imply the other.** `escape.test.js` proves `escapeHTML` and `safeURL` behave; a reviewer
+then removed `escapeHTML` from the `<h2>` and all tests still passed, because nothing
+exercised `markup.js` itself. `markup.test.js` closes that by running `generateMarkup` and
+inspecting the parsed DOM for inline event handlers and injected elements.
+
+Getting that test right needed two payloads, and the first version of it was worthless with
+one. A single-quote payload cannot break out of a double-quoted attribute, so with only
+`x' onerror='...` the suite stayed green through four separate sink regressions. It now uses
+`x" onerror="...` for attribute contexts and `<img src=x onerror="...">` for element content,
+and every sink regression is caught.
+
+One poison deliberately does *not* fail: reverting the attributes to single quotes while
+keeping `escapeHTML`. That is correct rather than a gap, since `escapeHTML` escapes both `'`
+and `"`, so either quoting style is safe once the value is escaped. The double quotes are
+defence in depth, not the fix.
 
 Three things about the setup are worth knowing before adding tests, because each cost time:
 
