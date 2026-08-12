@@ -8,7 +8,16 @@ const generateMarkup = (element = {}, data = {}) => {
   newElement.setAttribute('id', id)
   newElement.classList.add(...classes)
 
-  const { city, photos, weather } = data
+  // Normalised, not defaulted. A default parameter applies to `undefined` only, so `null`
+  // passed straight through and `data.icon` threw
+  // `TypeError: Cannot read properties of null`. That is not hypothetical: the route returns
+  // whatever parsedWeatherGetCity produced, and its documented fallback for a weatherbit
+  // response with no current data is `currentMin: null`. So an otherwise successful travel
+  // response could stop the client rendering.
+  const safe = data || {}
+  const city = safe.city || {}
+  const photos = Array.isArray(safe.photos) ? safe.photos : []
+  const weather = safe.weather || {}
 
   let markup = markupInfoWrapper(city, photos, weather)
 
@@ -16,6 +25,10 @@ const generateMarkup = (element = {}, data = {}) => {
   return newElement
 }
 
+// No `|| {}` here on purpose. markupCity is not exported and its only caller passes the
+// already-normalised `city` from markupInfoWrapper, so a null can never reach it. Adding a
+// guard produced a branch no test could reach: reverting it left all 84 tests green, which is
+// the signature of dead defence rather than defence in depth.
 const markupCity = (data = {}) => {
   return `<h2>${escapeHTML(data.name)}</h2>`
 }
@@ -29,7 +42,8 @@ const markupPhotos = (data = [], altForPhoto = '') => {
   return `<img src="${safeURL(selectedElement.previewURL)}" alt="${escapeHTML(altForPhoto)}" />`
 }
 
-const markupWeather = (data = {}, altForPhoto = '') => {
+const markupWeather = (rawData = {}, altForPhoto = '') => {
+  const data = rawData || {}
   // The icon code is pasted into a URL path, so it is restricted to the shape weatherbit
   // actually uses (letters and digits, e.g. c02d). Anything else would let a compromised
   // or unexpected response steer the path.
@@ -50,7 +64,10 @@ const markupWeatherForecast = (forecast = []) => {
   for (let element of Array.isArray(forecast) ? forecast : []) {
     const tempDate = new Date(element.date)
     markup += `<div class="flex-item">`
-    markup += `<div>${tempDate.getMonth() + 1}/${tempDate.getDate()}</div>`
+    // UTC getters. `new Date('2021-03-15')` is parsed as UTC midnight, and the local getters
+    // then report 14 March anywhere west of UTC. The original used getMonth(), which was also
+    // zero-based, so this line was wrong twice: it showed 2/15 in UTC and 2/14 in New York.
+    markup += `<div>${tempDate.getUTCMonth() + 1}/${tempDate.getUTCDate()}</div>`
     const weather = element.weather || {}
     // No optional chaining: .eslintrc.js pins ecmaVersion to 2018, which predates it, and
     // this project's era is 2021 rather than whatever the current syntax allows.
