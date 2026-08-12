@@ -5,7 +5,9 @@ import fetch from 'node-fetch'
 import { validatePropertiesObj } from '../validations/index'
 
 const geoAPI = {
-  baseURL: 'http://api.geonames.org/',
+  // https, not http: the username travels in the query string and plain HTTP puts it on
+  // the wire in clear text. geonames serves the same API over TLS.
+  baseURL: 'https://secure.geonames.org/',
   apiKey: process.env.GEONAMES_API_KEY,
   maxRows: 1
 }
@@ -31,8 +33,14 @@ const geoGetCityInfo = async (geoAPIBaseObject, city) => {
   }
 }
 
+// Returns undefined rather than throwing when the response has no `geonames` array.
+// It used to do `for (let obj of apiResponse.geonames)`, which threw
+// `TypeError: objArr is not iterable` both for `{}` and for the Error object the catch
+// block above returns on a network failure. Inside an async express handler that became an
+// unhandled rejection: a hung request on Node 14, a dead process on Node 15+.
 const parsedGeoGetCityInfo = (apiResponse = {}) => {
-  const objArr = apiResponse.geonames
+  const objArr = apiResponse && apiResponse.geonames
+  if (!Array.isArray(objArr) || objArr.length === 0) return undefined
   const parsedData = []
   for (let obj of objArr) {
     const { lng, lat, name } = obj

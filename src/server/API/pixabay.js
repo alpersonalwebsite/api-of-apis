@@ -28,8 +28,12 @@ const pixaGetCityImage = async (pixaAPIBaseObject, city) => {
   }
 }
 
+// Same guard as the geonames parser: `hits` is absent on an error response, and
+// `for...of undefined` threw. Pixabay also legitimately returns zero hits for an obscure
+// query, so an empty array is a normal answer, not a failure.
 const parsedPixaGetCityImage = (apiResponse = {}) => {
-  const objArr = apiResponse.hits
+  const objArr = apiResponse && apiResponse.hits
+  if (!Array.isArray(objArr)) return []
   const parsedData = []
   for (let obj of objArr) {
     const { previewURL, tags } = obj
