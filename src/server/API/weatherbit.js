@@ -1,6 +1,7 @@
 import dotenv from 'dotenv'
 dotenv.config({})
 import fetch from 'node-fetch'
+import { describeError } from '../utils/logging'
 import { validatePropertiesObj, warningForMaxDaysForecastAPI } from '../validations/index'
 import { getDiffDatesInDays } from '../utils/index'
 
@@ -25,7 +26,24 @@ const getRequest = async (
       throw 'Properties validation error'
     }
 
-    let builtURL = `${baseURL}${api}/daily?key=${apiKey}&lat=${lat}6&lon=${lng}`
+    // Two bugs were in this one line.
+    //
+    // 1. `lat=${lat}6` appended a stray 6 to every latitude, and the damage scales inversely
+    //    with precision, so quoting a high-precision example understates it badly:
+    //
+    //      40.7128 -> 40.71286   0.0001 deg, about 11 m
+    //      51.5    -> 51.56      0.06 deg,   about 6.7 km
+    //      4       -> 46         42 deg,     about 4,700 km
+    //      0       -> 6          6 deg
+    //
+    //    geonames returns whatever precision it has, so a low-precision latitude asked
+    //    about a different continent. It never errored either way.
+    //
+    // 2. `${api}/daily` is only correct for one of the two callers. Per Weatherbit's docs
+    //    the current-conditions endpoint is `/v2.0/current` and there is no
+    //    `/current/daily`; the 16-day forecast is `/v2.0/forecast/daily`. So the current
+    //    call was hitting a path that does not exist.
+    let builtURL = `${baseURL}${api}?key=${apiKey}&lat=${lat}&lon=${lng}`
     if (extraParams) builtURL += `${extraParams}`
 
     const req = await fetch(builtURL)
@@ -33,8 +51,15 @@ const getRequest = async (
 
     return res
   } catch (err) {
-    console.log(`ERROR: weatherGetCity - ${err}`)
-    return err
+    // Re-thrown, not returned. This used to `return err`, which meant a network failure or a
+    // bad JSON body left an Error object standing in for a response. Downstream that error
+    // reached validateResponse and the parsers, so a geonames outage produced a false 404
+    // ("We do not have that city in our records") and a weatherbit or pixabay outage produced
+    // a 200 with empty fallback data. Measured before this change, with node-fetch rejecting:
+    // POST /api/travels answered 404. The route's try/catch turns a throw into a 502, which is
+    // the honest answer for "an upstream service failed".
+    console.log(describeError('weatherGetCity', err))
+    throw err instanceof Error ? err : new Error(String(err))
   }
 }
 
@@ -47,14 +72,20 @@ const weatherGetCity = async (weatherAPIBaseObject, cityObj, dates) => {
 
   const requiredProperties = ['baseURL', 'apiKey']
 
-  const currentWeather = await getRequest(weatherAPI, 'current', requiredProperties, weatherAPIBaseObject, cityObj)
+  // The config passed in is the one used, not the module-level weatherAPI. It used to
+  // validate the argument and then build the URL from the module constant, so a caller could
+  // hand in a perfectly good object and have it ignored. That also made this function
+  // untestable without setting process.env before importing the module.
+  const config = weatherAPIBaseObject || weatherAPI
+
+  const currentWeather = await getRequest(config, 'current', requiredProperties, config, cityObj)
 
   const extraParameters = `&days=${days}`
   const forecastWeather = await getRequest(
-    weatherAPI,
-    'forecast',
+    config,
+    'forecast/daily',
     requiredProperties,
-    weatherAPIBaseObject,
+    config,
     cityObj,
     extraParameters
   )
@@ -68,11 +99,21 @@ const weatherGetCity = async (weatherAPIBaseObject, cityObj, dates) => {
   return weatherObj
 }
 
+// Guarded for the same reason as the other two parsers: `apiResponse.current.data[0]` threw
+// a TypeError whenever the upstream call failed, because the catch block above returns the
+// error object as though it were data. That surfaced as a hung request on Node 14 and a
+// dead process on Node 15+.
 const parsedWeatherGetCity = (apiResponse = {}) => {
-  const days = apiResponse.days
-  const currentMin = apiResponse.current.data[0].weather
+  const days = apiResponse && apiResponse.days
+  // Elements are checked, not just the arrays. An upstream response can carry
+  // `data: [null]`, and `currentData[0].weather` or destructuring a null element throws,
+  // which defeats the whole point of returning a documented fallback.
+  const isObj = (v) => v !== null && typeof v === 'object'
+  const currentData = apiResponse && apiResponse.current && apiResponse.current.data
+  const currentMin = Array.isArray(currentData) && isObj(currentData[0]) ? currentData[0].weather : null
+  const forecastData = apiResponse && apiResponse.forecast && apiResponse.forecast.data
   let forecastMin = []
-  for (let element of apiResponse.forecast.data) {
+  for (let element of (Array.isArray(forecastData) ? forecastData : []).filter(isObj)) {
     const { datetime, temp, weather } = element
     forecastMin.push({
       date: datetime,
